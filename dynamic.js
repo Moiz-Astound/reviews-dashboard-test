@@ -234,10 +234,20 @@ async function populateDashboardFromCache(cachedData) {
 
             // Merge cached data with REGIONS structure for competitors
             const regionInfo = REGIONS[regionName] || { competitors: regionData.competitors };
-            const regionSection = createRegionSection(regionName, {
-                ...regionInfo,
-                locations: regionData.locations
-            }, monthLabels);
+
+            // Use createRegionSectionCustom if available (from index.html), otherwise use createRegionSection
+            let regionSection;
+            if (typeof createRegionSectionCustom === 'function') {
+                regionSection = createRegionSectionCustom(regionName, {
+                    ...regionInfo,
+                    locations: regionData.locations
+                }, monthLabels);
+            } else {
+                regionSection = createRegionSection(regionName, {
+                    ...regionInfo,
+                    locations: regionData.locations
+                }, monthLabels);
+            }
             container.appendChild(regionSection);
 
             // Update table rows with cached ratings
@@ -248,6 +258,19 @@ async function populateDashboardFromCache(cachedData) {
 
             // Calculate and update average row
             updateAverageRow(regionName, regionData.locations.length, monthLabels);
+
+            // Generate graph data from cached ratings
+            if (typeof generateGraphDataFromCache === 'function') {
+                const graphData = generateGraphDataFromCache(regionName, regionData, monthLabels);
+                // Store in global variable for graph rendering
+                if (typeof regionalGraphData !== 'undefined') {
+                    regionalGraphData[regionName] = graphData;
+                }
+                // Render the graph tab
+                if (typeof renderRegionGraph === 'function') {
+                    renderRegionGraph(regionName, graphData);
+                }
+            }
         }
     } catch (error) {
         console.error('Error in populateDashboard:', error);
@@ -264,7 +287,49 @@ async function populateDashboardFromCache(cachedData) {
         console.error('populateCompetitorData function not found - make sure competitors.js is loaded');
     }
 
+    // Generate companywide data
+    if (typeof generateCompanywideData === 'function') {
+        await generateCompanywideData();
+    }
+
     console.log('=== Finished populateDashboard (from cache) ===');
+}
+
+// Helper function to generate graph data from cached ratings
+function generateGraphDataFromCache(regionName, regionData, monthLabels) {
+    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c',
+                    '#34495e', '#e67e22', '#95a5a6', '#16a085', '#c0392b', '#27ae60',
+                    '#d35400', '#8e44ad', '#2980b9', '#c0392b', '#16a085', '#f1c40f',
+                    '#e74c3c', '#3498db', '#2ecc71'];
+
+    const locationsData = regionData.locations.map((loc, i) => ({
+        name: loc.address.includes('Serviceable Area') ? 'Serviceable Area' : loc.address,
+        city: loc.city,
+        data: loc.ratings,
+        color: colors[i % colors.length]
+    }));
+
+    // Calculate average
+    const averageData = [];
+    for (let i = 0; i < monthLabels.length; i++) {
+        const validRatings = locationsData.map(loc => loc.data[i]).filter(r => r !== null);
+        if (validRatings.length > 0) {
+            const avg = validRatings.reduce((sum, r) => sum + parseFloat(r), 0) / validRatings.length;
+            averageData.push(parseFloat(avg.toFixed(1)));
+        } else {
+            averageData.push(null);
+        }
+    }
+
+    return {
+        months: monthLabels.map(m => m.label),
+        locations: locationsData,
+        average: {
+            name: `${regionName.toUpperCase()} AVERAGE`,
+            data: averageData,
+            color: '#000000'
+        }
+    };
 }
 
 // Populate dashboard with live API data (SLOW - fallback only)
