@@ -255,6 +255,15 @@ async function populateDashboardFromCache(cachedData) {
 
     // Sync row heights
     syncRowHeights();
+
+    // Populate competitor data for all locations
+    console.log('Populating competitor data...');
+    if (typeof populateCompetitorData === 'function') {
+        populateCompetitorData();
+    } else {
+        console.error('populateCompetitorData function not found - make sure competitors.js is loaded');
+    }
+
     console.log('=== Finished populateDashboard (from cache) ===');
 }
 
@@ -303,6 +312,15 @@ async function populateDashboardFromAPI() {
 
     // Sync row heights
     syncRowHeights();
+
+    // Populate competitor data for all locations
+    console.log('Populating competitor data...');
+    if (typeof populateCompetitorData === 'function') {
+        populateCompetitorData();
+    } else {
+        console.error('populateCompetitorData function not found - make sure competitors.js is loaded');
+    }
+
     console.log('=== Finished populateDashboard (from API) ===');
 }
 
