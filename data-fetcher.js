@@ -121,7 +121,7 @@ function generateMonthLabels() {
     return months;
 }
 
-// Fetch rating from Yext API
+// Fetch rating from Yext API via Netlify proxy
 async function fetchRating(entityId, maxDate) {
     if (!entityId || entityId === '') {
         console.log(`Skipping empty entity ID`);
@@ -129,7 +129,9 @@ async function fetchRating(entityId, maxDate) {
     }
 
     return new Promise((resolve) => {
-        const url = `${YEXT_BASE_URL}/accounts/me/reviews/aggregateratings?entityIds=${entityId}&maxDate=${maxDate}&v=${YEXT_API_VERSION}&api_key=${YEXT_API_KEY}`;
+        // Use the Netlify proxy that we know works!
+        const PROXY_URL = 'https://moizgoogle.netlify.app/.netlify/functions/yext-proxy';
+        const url = `${PROXY_URL}?entityId=${entityId}&maxDate=${maxDate}`;
 
         https.get(url, (res) => {
             let data = '';
